@@ -1,0 +1,6 @@
+Flask for the web application
+Flask==3.0.3
+Dependencies for the AI model loading and prediction
+tensorflow==2.16.1
+numpy==1.26.4
+joblib==1.4.2
