@@ -1,0 +1,506 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypercodex: AI Exoplanet Identification</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Load Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        /* --- 耳 COLOR PALETTE & VARIABLES (Tailwind uses these via custom theme) --- */
+        :root {
+            --color-deep-space: #0B0C10;     /* Primary Background */
+            --color-cosmic-dust: #1F2833;    /* Secondary Background / Card */
+            --color-electric-blue: #66FCF1;  /* Primary Accent / Highlight */
+            --color-stellar-green: #45A295;  /* Secondary Accent / Success */
+            --color-nebula-pink: #C5C6C7;    /* Neutral / Text */
+            --color-alert-red: #E76F51;      /* Alert Red */
+            /* New colors for planets */
+            --color-planet-purple: #7B68EE;  /* For Confirmed */
+            --color-planet-orange: #FFD700;  /* For Candidate */
+            --color-planet-red: #DC143C;     /* For False Positive */
+        }
+        
+        /* Custom Tailwind Configuration */
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-space': 'var(--color-deep-space)',
+                        'cosmic-dust': 'var(--color-cosmic-dust)',
+                        'electric-blue': 'var(--color-electric-blue)',
+                        'stellar-green': 'var(--color-stellar-green)',
+                        'nebula-pink': 'var(--color-nebula-pink)',
+                        'alert-red': 'var(--color-alert-red)',
+                        'planet-purple': 'var(--color-planet-purple)',
+                        'planet-orange': 'var(--color-planet-orange)',
+                        'planet-red': 'var(--color-planet-red)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glow': '0 0 15px rgba(102, 252, 241, 0.6)',
+                        'lg-glow': '0 0 25px rgba(102, 252, 241, 0.8)',
+                    }
+                }
+            }
+        }
+
+        /* Basic scrollbar styling for dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--color-deep-space);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-cosmic-dust);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-stellar-green);
+        }
+
+        /* Input field focus glow */
+        .input-glow:focus {
+            outline: none;
+            border-color: var(--color-electric-blue);
+            box-shadow: 0 0 0 3px rgba(102, 252, 241, 0.5);
+        }
+
+        /* Custom progress bar styles */
+        .progress-bar-container {
+            height: 1.5rem; /* Equivalent to h-6 */
+            background-color: var(--color-cosmic-dust);
+            border-radius: 9999px; /* Full rounding */
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        .progress-bar {
+            height: 100%;
+            transition: width 0.5s ease-in-out, background-color 0.3s ease;
+            text-align: right;
+            line-height: 1.5rem;
+            padding-right: 0.5rem;
+            color: var(--color-deep-space);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .progress-bar-candidate {
+            background-color: var(--color-planet-orange);
+        }
+
+        .progress-bar-false-positive {
+            background-color: var(--color-planet-red);
+        }
+    </style>
+</head>
+<!-- LAYOUT FIX: Added w-screen and overflow-x-hidden for proper responsiveness and to fix horizontal scroll/shift -->
+<body class="bg-deep-space text-nebula-pink font-sans min-h-screen flex antialiased overflow-x-hidden w-screen">
+
+    <!-- Mobile Menu Button -->
+    <button id="menu-toggle" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-cosmic-dust rounded-full shadow-lg-glow text-electric-blue hover:bg-deep-space transition duration-300">
+        <i data-lucide="menu"></i>
+    </button>
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-300 ease-in-out w-64 bg-cosmic-dust p-6 flex flex-col z-40 shadow-xl">
+        <div class="text-2xl font-bold text-electric-blue mb-8">
+            HYPER<span class="text-nebula-pink">CODEX</span>
+        </div>
+        <nav class="flex-1 space-y-2">
+            <a href="#dashboard" id="nav-dashboard" class="nav-item flex items-center p-3 rounded-xl transition duration-200 cursor-pointer active-nav bg-deep-space text-electric-blue">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i>
+                Dashboard
+            </a>
+            <a href="#analysis" id="nav-analysis" class="nav-item flex items-center p-3 rounded-xl transition duration-200 cursor-pointer text-nebula-pink hover:text-electric-blue">
+                <i data-lucide="search-check" class="w-5 h-5 mr-3"></i>
+                Exoplanet Analysis
+            </a>
+            <a href="#settings" id="nav-settings" class="nav-item flex items-center p-3 rounded-xl transition duration-200 cursor-pointer text-nebula-pink hover:text-electric-blue">
+                <i data-lucide="settings" class="w-5 h-5 mr-3"></i>
+                Settings
+            </a>
+        </nav>
+        <footer class="mt-auto pt-6 border-t border-deep-space">
+            <p class="text-xs text-nebula-pink opacity-70">AI Exoplanet ID v1.0</p>
+        </footer>
+    </aside>
+
+    <!-- Main Content Area -->
+    <!-- LAYOUT FIX: Added min-w-0 to allow the flex item to shrink correctly and prevent overflow -->
+    <main class="flex-1 p-4 md:p-10 overflow-y-auto min-w-0">
+        
+        <!-- Content Sections -->
+        <div id="dashboard" class="content-section">
+            <h1 class="text-4xl font-extrabold text-electric-blue mb-6">Exoplanet Dashboard</h1>
+            <p class="text-lg mb-8 text-nebula-pink">Welcome to the Hypercodex AI. Analyze Kepler data to identify potential exoplanets and false positives.</p>
+            
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-cosmic-dust p-6 rounded-xl shadow-glow border border-electric-blue/30">
+                    <div class="text-sm font-medium text-electric-blue mb-2 flex items-center"><i data-lucide="rocket" class="w-4 h-4 mr-2"></i> Total KOIs Processed</div>
+                    <div class="text-4xl font-bold text-nebula-pink">9,564</div>
+                    <p class="text-sm text-stellar-green mt-2">+5.2% last cycle</p>
+                </div>
+                <div class="bg-cosmic-dust p-6 rounded-xl shadow-glow border border-electric-blue/30">
+                    <div class="text-sm font-medium text-electric-blue mb-2 flex items-center"><i data-lucide="globe" class="w-4 h-4 mr-2"></i> Confirmed Candidates</div>
+                    <div class="text-4xl font-bold text-nebula-pink">2,662</div>
+                    <p class="text-sm text-planet-orange mt-2">High Confidence</p>
+                </div>
+                <div class="bg-cosmic-dust p-6 rounded-xl shadow-glow border border-electric-blue/30">
+                    <div class="text-sm font-medium text-electric-blue mb-2 flex items-center"><i data-lucide="shield-off" class="w-4 h-4 mr-2"></i> False Positives</div>
+                    <div class="text-4xl font-bold text-nebula-pink">6,902</div>
+                    <p class="text-sm text-alert-red mt-2">Stellar noise detected</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="analysis" class="content-section hidden">
+            <h1 class="text-4xl font-extrabold text-electric-blue mb-6">Exoplanet Prediction</h1>
+            <p class="text-lg mb-8 text-nebula-pink">Input the Kepler Object of Interest (KOI) parameters to generate a classification based on the deep learning model.</p>
+            
+            <div class="bg-cosmic-dust p-8 rounded-xl shadow-lg-glow border border-electric-blue/30 max-w-2xl mx-auto">
+                <form id="analysis-form" class="grid grid-cols-1 gap-6">
+                    <div>
+                        <label for="koi_period" class="block text-sm font-medium text-nebula-pink">Orbital Period (days)</label>
+                        <input type="number" id="koi_period" value="9.997" step="0.001" class="mt-1 block w-full bg-deep-space border border-cosmic-dust rounded-lg p-3 text-electric-blue input-glow" required>
+                    </div>
+                    <div>
+                        <label for="koi_depth" class="block text-sm font-medium text-nebula-pink">Transit Depth (ppm)</label>
+                        <input type="number" id="koi_depth" value="111.0" step="0.1" class="mt-1 block w-full bg-deep-space border border-cosmic-dust rounded-lg p-3 text-electric-blue input-glow" required>
+                    </div>
+                    <div>
+                        <label for="koi_duration" class="block text-sm font-medium text-nebula-pink">Transit Duration (hrs)</label>
+                        <input type="number" id="koi_duration" value="2.95" step="0.01" class="mt-1 block w-full bg-deep-space border border-cosmic-dust rounded-lg p-3 text-electric-blue input-glow" required>
+                    </div>
+                    <div>
+                        <label for="koi_srad" class="block text-sm font-medium text-nebula-pink">Stellar Radius ($$R_{\odot}$$)</label>
+                        <input type="number" id="koi_srad" value="0.84" step="0.01" class="mt-1 block w-full bg-deep-space border border-cosmic-dust rounded-lg p-3 text-electric-blue input-glow" required>
+                    </div>
+                    <div>
+                        <label for="koi_steff" class="block text-sm font-medium text-nebula-pink">Stellar Effective Temp (K)</label>
+                        <input type="number" id="koi_steff" value="5696" step="1" class="mt-1 block w-full bg-deep-space border border-cosmic-dust rounded-lg p-3 text-electric-blue input-glow" required>
+                    </div>
+                    
+                    <button type="submit" id="analyze-button" class="mt-4 bg-electric-blue text-deep-space font-bold py-3 rounded-xl hover:bg-stellar-green transition duration-300 shadow-glow flex items-center justify-center">
+                        <i data-lucide="cpu" class="w-5 h-5 mr-2"></i> 
+                        Analyze Data
+                    </button>
+                </form>
+
+                <!-- Loading/Error Message Box -->
+                <div id="message-box" class="hidden mt-6 p-4 rounded-xl text-sm" role="alert"></div>
+
+                <!-- Analysis Results Section -->
+                <div id="results-section" class="mt-8 pt-6 border-t border-deep-space hidden">
+                    <h2 class="text-2xl font-semibold text-stellar-green mb-4">Analysis Result</h2>
+                    
+                    <!-- Prediction Probability Gauge -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-lg font-medium text-nebula-pink">Predicted Disposition:</span>
+                            <span id="analysis-disposition" class="text-xl font-bold text-electric-blue">...</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="progress-bar" class="progress-bar" style="width: 0%;">
+                                <span id="analysis-score">0.00%</span>
+                            </div>
+                        </div>
+                        <p id="probability-text" class="text-xs mt-2 text-nebula-pink opacity-70">Probability is currently being calculated.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings" class="content-section hidden">
+            <h1 class="text-4xl font-extrabold text-electric-blue mb-6">Settings</h1>
+            <p class="text-lg mb-8 text-nebula-pink">Application configuration and model information.</p>
+            
+            <div class="bg-cosmic-dust p-6 rounded-xl shadow-lg border border-electric-blue/30">
+                <h2 class="text-xl font-semibold text-electric-blue mb-4">Model Information</h2>
+                <dl class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <dt class="text-nebula-pink opacity-80">Model File:</dt>
+                        <dd class="text-stellar-green font-mono">deep_learning_model.h5</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-nebula-pink opacity-80">Training Data:</dt>
+                        <dd class="text-nebula-pink">Kepler Data (Q1-Q17)</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-nebula-pink opacity-80">Input Features:</dt>
+                        <dd class="text-nebula-pink">5 (Period, Depth, Duration, Stellar Radius, Stellar Temp)</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-nebula-pink opacity-80">AI Framework:</dt>
+                        <dd class="text-nebula-pink">TensorFlow/Keras</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const toggleButton = document.getElementById('menu-toggle');
+            const navItems = document.querySelectorAll('.nav-item');
+            const contentSections = document.querySelectorAll('.content-section');
+            const analysisForm = document.getElementById('analysis-form');
+            const resultsSection = document.getElementById('results-section');
+            const messageBox = document.getElementById('message-box');
+            const analyzeButton = document.getElementById('analyze-button');
+
+            // Initialize Lucide Icons
+            lucide.createIcons();
+
+            // --- Navigation & Tab Logic ---
+
+            // Mobile Menu Toggle
+            toggleButton.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+                if (sidebar.classList.contains('-translate-x-full')) {
+                    toggleButton.innerHTML = `<i data-lucide="menu"></i>`;
+                } else {
+                    toggleButton.innerHTML = `<i data-lucide="x"></i>`;
+                }
+                lucide.createIcons(); 
+            });
+
+            // Handle Navigation Clicks
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = item.getAttribute('href').substring(1);
+                    
+                    // Update active nav state
+                    setActiveNav(item);
+
+                    // Show correct content section
+                    contentSections.forEach(section => {
+                        section.classList.add('hidden');
+                    });
+                    document.getElementById(targetId).classList.remove('hidden');
+
+                    // If on analysis, reset results
+                    if (targetId === 'analysis') {
+                        resultsSection.classList.add('hidden');
+                        hideMessage();
+                    }
+                });
+            });
+
+            // Set Active Navigation State
+            function setActiveNav(element) {
+                navItems.forEach(item => {
+                    item.classList.remove('active-nav', 'bg-deep-space', 'text-electric-blue');
+                    item.classList.add('text-nebula-pink', 'hover:text-electric-blue');
+                });
+                element.classList.add('active-nav', 'bg-deep-space', 'text-electric-blue');
+                element.classList.remove('text-nebula-pink', 'hover:text-electric-blue');
+
+                // Collapse sidebar on mobile after click
+                if (window.innerWidth < 768) {
+                    sidebar.classList.add('-translate-x-full');
+                    toggleButton.innerHTML = `<i data-lucide="menu"></i>`;
+                    lucide.createIcons(); 
+                }
+            }
+
+            // Set initial active state (Dashboard)
+            const firstNav = document.getElementById('nav-dashboard');
+            if(firstNav) {
+                setActiveNav(firstNav);
+            }
+            
+            // --- Message Box Helpers ---
+
+            function showMessage(type, message) {
+                messageBox.classList.remove('hidden', 'bg-alert-red/20', 'text-alert-red', 'bg-stellar-green/20', 'text-stellar-green', 'bg-electric-blue/20', 'text-electric-blue');
+                if (type === 'error') {
+                    messageBox.classList.add('bg-alert-red/20', 'text-alert-red');
+                } else if (type === 'success') {
+                    messageBox.classList.add('bg-stellar-green/20', 'text-stellar-green');
+                } else {
+                     messageBox.classList.add('bg-electric-blue/20', 'text-electric-blue');
+                }
+                messageBox.textContent = message;
+            }
+
+            function hideMessage() {
+                messageBox.classList.add('hidden');
+            }
+
+            // --- Prediction Functions (Using Real API Call) ---
+
+            // FIX: Refactored fetchWithRetry to read the body only once, 
+            // resolving "body stream already read" error.
+            async function fetchWithRetry(url, options, maxRetries = 3, delay = 1000) {
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        const response = await fetch(url, options);
+                        
+                        // Read the body content as text once, regardless of success or failure
+                        const responseBody = await response.text(); 
+                        
+                        if (!response.ok) {
+                            let errorMessage = `Status ${response.status} (${response.statusText})`;
+                            
+                            // Attempt to parse the raw text body as JSON
+                            try {
+                                const errorJson = JSON.parse(responseBody);
+                                if (errorJson.error) {
+                                    errorMessage += `: ${errorJson.error}`;
+                                } else {
+                                    errorMessage += `: ${responseBody.substring(0, 100)}...`; 
+                                }
+                            } catch (e) {
+                                // If parsing fails (not JSON), use the raw text
+                                errorMessage += `: ${responseBody.substring(0, 100)}...`; 
+                            }
+
+                            // Throw the detailed error message
+                            throw new Error(errorMessage);
+                        }
+
+                        // If response is OK, return the parsed JSON data for the successful path
+                        try {
+                            return JSON.parse(responseBody);
+                        } catch (e) {
+                            throw new Error("Successful response received, but failed to parse body as JSON.");
+                        }
+
+                    } catch (error) {
+                        if (i === maxRetries - 1) {
+                            throw error;
+                        } 
+                        await new Promise(resolve => setTimeout(resolve, delay * (2 ** i)));
+                    }
+                }
+            }
+
+
+            async function analyzePlanetData(inputData) {
+                resultsSection.classList.add('hidden');
+                showMessage('info', 'Running deep learning analysis... Please wait.');
+                analyzeButton.disabled = true;
+                analyzeButton.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 mr-2 animate-spin"></i> Analyzing...`;
+                lucide.createIcons();
+
+                try {
+                    // --- ACTUAL API CALL: fetchWithRetry now returns the parsed JSON data directly
+                    const data = await fetchWithRetry('/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ features: inputData }) 
+                    });
+                    
+                    // The 'probability' key from app.py contains the array [P(False Positive), P(Candidate)]
+                    const prediction = data.probability; 
+
+                    // Ensure we received a valid probability array
+                    if (!Array.isArray(prediction) || prediction.length !== 2) {
+                         throw new Error("Invalid probability format received from API. Expected array [P(FP), P(Candidate)].");
+                    }
+                    
+                    const fpProbability = prediction[0];
+                    const candidateProbability = prediction[1];
+                    // --- END ACTUAL API CALL ---
+
+                    // Determine which class has the higher probability
+                    const isCandidate = candidateProbability >= fpProbability;
+                    const primaryProbability = Math.max(candidateProbability, fpProbability);
+                    const primaryScore = primaryProbability * 100;
+
+                    // Determine disposition and class for styling
+                    let disposition = '';
+                    let scoreClass = '';
+                    if (isCandidate) {
+                        if (primaryProbability > 0.9) {
+                            disposition = 'Confirmed Candidate';
+                            scoreClass = 'text-planet-purple';
+                        } else {
+                            disposition = 'Potential Candidate';
+                            scoreClass = 'text-planet-orange';
+                        }
+                    } else {
+                        disposition = 'False Positive';
+                        scoreClass = 'text-planet-red';
+                    }
+
+                    // Update UI elements
+                    document.getElementById('analysis-disposition').textContent = disposition;
+                    document.getElementById('analysis-disposition').className = `text-xl font-bold ${scoreClass}`;
+                    
+                    const progressBar = document.getElementById('progress-bar');
+                    
+                    // Set width and ensure smooth transition
+                    progressBar.style.width = primaryScore.toFixed(2) + '%';
+                    
+                    // Clear existing classes and set new ones for color
+                    progressBar.classList.remove('progress-bar-candidate', 'progress-bar-false-positive');
+                    
+                    if (isCandidate) {
+                        progressBar.classList.add('progress-bar-candidate');
+                        progressBar.textContent = `Candidate: ${primaryScore.toFixed(2)}%`;
+                        document.getElementById('probability-text').textContent = `The model is ${primaryScore.toFixed(2)}% confident this is an Exoplanet Candidate.`;
+                    } else {
+                        progressBar.classList.add('progress-bar-false-positive');
+                        progressBar.textContent = `False Positive: ${primaryScore.toFixed(2)}%`;
+                        document.getElementById('probability-text').textContent = `The model is ${primaryScore.toFixed(2)}% confident this is a False Positive.`;
+                    }
+
+                    // Show results
+                    resultsSection.classList.remove('hidden');
+                    hideMessage();
+
+                } catch (error) {
+                    console.error("Analysis failed:", error);
+                    // Display the detailed error message captured by fetchWithRetry
+                    showMessage('error', `Analysis Error: ${error.message}`);
+
+                } finally {
+                    analyzeButton.disabled = false;
+                    analyzeButton.innerHTML = `<i data-lucide="cpu" class="w-5 h-5 mr-2"></i> Analyze Data`;
+                    lucide.createIcons();
+                }
+            }
+
+            // --- Form Submission Handler ---
+            analysisForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                // Get the 5 input features
+                const inputs = [
+                    document.getElementById('koi_period').value,
+                    document.getElementById('koi_depth').value,
+                    document.getElementById('koi_duration').value,
+                    document.getElementById('koi_srad').value,
+                    document.getElementById('koi_steff').value,
+                ];
+
+                const valid = inputs.every(val => val !== "" && !isNaN(parseFloat(val)));
+
+                if (valid) {
+                    analyzePlanetData(inputs);
+                } else {
+                    showMessage('error', 'Please ensure all input fields are filled with valid numerical data.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
